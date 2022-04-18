@@ -1,4 +1,5 @@
 using Mirror;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,15 +13,18 @@ namespace Runtime.Player
     
         private Vector3 inputVector = Vector3.zero;
         private Controller controller;
-    
-    
+        private float xRotation;
+
         private void FixedUpdate()
         {
             if(!hasAuthority) { return; }
 
             Move(inputVector);
             transform.Rotate(Vector3.up, Mouse.current.delta.x.ReadValue());
-            camera.Rotate(Vector3.left, Mouse.current.delta.y.ReadValue());
+
+            xRotation -= Mouse.current.delta.y.ReadValue();
+            xRotation = Mathf.Clamp(xRotation, -80f, 80f);
+            camera.localRotation = Quaternion.Euler(xRotation, 0, 0);
         }
 
         public override void OnStopAuthority()
@@ -48,10 +52,9 @@ namespace Runtime.Player
         
         private void Move(Vector3 input)
         {
-            input += Physics.gravity;
             Vector3 move = transform.right * input.x + transform.forward * input.z;
 
-            charController.Move( move * speed * Time.fixedDeltaTime);
+            charController.Move((move * speed + Physics.gravity) * Time.fixedDeltaTime);
         }
     
         private void Canceled_Move(InputAction.CallbackContext context) => inputVector = Vector3.zero;
