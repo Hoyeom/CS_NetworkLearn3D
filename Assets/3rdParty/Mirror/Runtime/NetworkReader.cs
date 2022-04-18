@@ -190,8 +190,6 @@ namespace Mirror
             }
             return readerDelegate(this);
         }
-        
-        
     }
 
     public static class CustomReadWriteFunctions
@@ -201,7 +199,6 @@ namespace Mirror
             NetworkIdentity networkIdentity = attackAble.GetIdentity();
             writer.WriteNetworkIdentity(networkIdentity);
         }
-
         public static IAttackAble ReadIAttackAble(this NetworkReader reader)
         {
             NetworkIdentity networkIdentity = reader.ReadNetworkIdentity();
@@ -215,8 +212,8 @@ namespace Mirror
     
     public interface IAttackAble
     {
-        public void TakeDamage(float damage);
         public NetworkIdentity GetIdentity();
+        public void TakeDamage(float damage);
     }
 
     /// <summary>Helper class that weaver populates with all reader types.</summary>
