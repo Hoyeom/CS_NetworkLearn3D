@@ -190,6 +190,33 @@ namespace Mirror
             }
             return readerDelegate(this);
         }
+        
+        
+    }
+
+    public static class CustomReadWriteFunctions
+    {
+        public static void WriteIAttackAble(this NetworkWriter writer, IAttackAble attackAble)
+        {
+            NetworkIdentity networkIdentity = attackAble.GetIdentity();
+            writer.WriteNetworkIdentity(networkIdentity);
+        }
+
+        public static IAttackAble ReadIAttackAble(this NetworkReader reader)
+        {
+            NetworkIdentity networkIdentity = reader.ReadNetworkIdentity();
+            IAttackAble attackAble = networkIdentity != null
+                ? networkIdentity.GetComponent<IAttackAble>()
+                : null;
+
+            return attackAble;
+        }
+    }
+    
+    public interface IAttackAble
+    {
+        public void TakeDamage(float damage);
+        public NetworkIdentity GetIdentity();
     }
 
     /// <summary>Helper class that weaver populates with all reader types.</summary>

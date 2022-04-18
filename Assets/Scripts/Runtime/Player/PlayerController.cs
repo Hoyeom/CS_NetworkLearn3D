@@ -5,8 +5,10 @@ using UnityEngine.InputSystem;
 
 namespace Runtime.Player
 {
-    public class PlayerController : NetworkBehaviour
+    public class PlayerController : NetworkBehaviour,IAttackAble
     {
+        [SyncVar] private float curHealth = 100;
+        
         [SerializeField] private CharacterController charController;
         [SerializeField] private Transform camera = null;
         [SerializeField] private float speed = 3;
@@ -14,7 +16,7 @@ namespace Runtime.Player
         private Vector3 inputVector = Vector3.zero;
         private Controller controller;
         private float xRotation;
-
+        
         private void FixedUpdate()
         {
             if(!hasAuthority) { return; }
@@ -31,7 +33,8 @@ namespace Runtime.Player
         {
             controller.Player.Move.performed -= Performed_Move;
             controller.Player.Move.canceled -= Canceled_Move;
-        
+            controller.Player.Fire.started -= Started_Fire;
+            
             controller.Disable();
         }
 
@@ -46,8 +49,30 @@ namespace Runtime.Player
 
             controller.Player.Move.performed += Performed_Move;
             controller.Player.Move.canceled += Canceled_Move;
+            controller.Player.Fire.started += Started_Fire;
         
             controller.Enable();
+        }
+
+        private void Started_Fire(InputAction.CallbackContext context)
+        {
+            Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2));
+            
+            Debug.Log("Fire");
+            
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                if (hit.collider.TryGetComponent<IAttackAble>(out IAttackAble attackAble))
+                {
+                    CmdFire(attackAble);
+                }
+            }
+        }
+
+        [Command]
+        private void CmdFire(IAttackAble attackAble)
+        {
+            attackAble?.TakeDamage(5);
         }
         
         private void Move(Vector3 input)
@@ -56,7 +81,20 @@ namespace Runtime.Player
 
             charController.Move((move * speed + Physics.gravity) * Time.fixedDeltaTime);
         }
-    
+
+        [Server]
+        public void TakeDamage(float damage)
+        {
+            curHealth -= damage;
+            Debug.Log($"{gameObject.name}은 {damage}피해를 입었따! 현재체력이당!: {curHealth}");
+        }
+
+        public NetworkIdentity GetIdentity()
+        {
+            return GetComponent<NetworkIdentity>();
+        }
+
+
         private void Canceled_Move(InputAction.CallbackContext context) => inputVector = Vector3.zero;
 
         private void Performed_Move(InputAction.CallbackContext context)
