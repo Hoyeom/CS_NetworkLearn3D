@@ -1,6 +1,7 @@
 using System;
 using DG.Tweening;
 using Mirror;
+using Runtime.UI;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -14,6 +15,8 @@ namespace Runtime.Player
         [SyncVar(hook = nameof(HookedCurHealth))] 
         private float curHealth = 100;
         private float maxHealth = 100;
+
+        public event Action<float, float> OnChangedHealth;
         
         [SerializeField] private CharacterController charController;
         
@@ -53,20 +56,13 @@ namespace Runtime.Player
             MouseRotate();
         }
 
-        public override void OnStopAuthority()
-        {
-            controller.Player.Move.performed -= Performed_Move;
-            controller.Player.Move.canceled -= Canceled_Move;
-            controller.Player.Fire.started -= Started_Fire;
-            
-            controller.Disable();
-        }
-
         public override void OnStartAuthority()
         {
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
 
+            GameObject.FindObjectOfType<PlayerHud>().Initialized(this);
+            
             vCamera.gameObject.SetActive(true);
 
             controller ??= new Controller();
@@ -78,12 +74,33 @@ namespace Runtime.Player
             controller.Enable();
         }
         
-        
-
-        [Command]
-        private void CmdFire(IAttackAble attackAble)
+        public override void OnStopAuthority()
         {
-            attackAble?.TakeDamage(5);
+            GameObject.FindObjectOfType<PlayerHud>().DestroyHud(this);
+            
+            controller.Player.Move.performed -= Performed_Move;
+            controller.Player.Move.canceled -= Canceled_Move;
+            controller.Player.Fire.started -= Started_Fire;
+            
+            controller.Disable();
+        }
+        
+        [Command]
+        private void CmdFire(Ray ray)
+        {
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                RpcFireFx();    
+                IAttackAble attackAble = gunBase.FireRayBullet(hit.point);
+                
+                attackAble?.TakeDamage(5);
+            }
+        }
+
+        [ClientRpc]
+        private void RpcFireFx()
+        {
+            gunBase.FireFx();
         }
         
         private void Move(Vector3 input)
@@ -106,6 +123,7 @@ namespace Runtime.Player
         
         #region Server
 
+
         public NetworkIdentity GetIdentity()
         {
             return GetComponent<NetworkIdentity>();
@@ -121,7 +139,11 @@ namespace Runtime.Player
 
         private void HookedCurHealth(float oldValue, float newValue)
         {
-            if(hasAuthority) { return; }
+            if (hasAuthority)
+            {
+                OnChangedHealth?.Invoke(curHealth, maxHealth);
+                return;
+            }
 
             healthGroup.alpha = 1;
 
@@ -146,13 +168,8 @@ namespace Runtime.Player
         private void Started_Fire(InputAction.CallbackContext context)
         {
             Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2));
-            
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                IAttackAble attackAble = gunBase.FireRayBullet(hit.point);
-                if (attackAble != null)
-                    CmdFire(attackAble);
-            }
+
+            CmdFire(ray);
         }
 
         #endregion

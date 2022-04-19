@@ -1,5 +1,4 @@
-﻿using System;
-using Mirror;
+﻿using Mirror;
 using UnityEngine;
 
 namespace Runtime.Player
@@ -7,7 +6,9 @@ namespace Runtime.Player
     public class GunBase : MonoBehaviour
     {
         [SerializeField] private Transform firePoint;
+        [SerializeField] private ParticleSystem fireParticle;
 
+        
         public IAttackAble FireRayBullet(Vector3 hitPoint)
         {
             IAttackAble attackAble = null;
@@ -21,8 +22,13 @@ namespace Runtime.Player
                     
                 }
             }
-
+            
             return attackAble;
+        }
+
+        public void FireFx()
+        {
+            fireParticle.Play();
         }
     }
 }
