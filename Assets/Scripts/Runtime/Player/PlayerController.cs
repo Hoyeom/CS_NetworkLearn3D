@@ -2,11 +2,11 @@ using System;
 using DG.Tweening;
 using Mirror;
 using Runtime.UI;
-using Unity.Mathematics;
+using UniRx;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Utilities;
 using UnityEngine.UI;
+using Observable = UniRx.Observable;
 
 namespace Runtime.Player
 {
@@ -34,6 +34,9 @@ namespace Runtime.Player
         [Header("Gun")]
         [SerializeField] private GunBase gunBase;
 
+        [SerializeField] private bool isDelay;
+        [SerializeField] private float gunDelay = 1;
+        
         private float speed = 3;
     
         private Vector3 inputVector = Vector3.zero;
@@ -167,8 +170,13 @@ namespace Runtime.Player
         
         private void Started_Fire(InputAction.CallbackContext context)
         {
-            Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2));
+            if(isDelay) { return; }
 
+            isDelay = true;
+            Observable.Timer(TimeSpan.FromSeconds(gunDelay))
+                .Subscribe(_ => isDelay = false);
+
+            Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2));
             CmdFire(ray);
         }
 
