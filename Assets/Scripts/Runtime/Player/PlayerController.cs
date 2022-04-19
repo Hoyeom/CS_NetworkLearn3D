@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using Mirror;
 using Unity.Mathematics;
@@ -15,11 +16,21 @@ namespace Runtime.Player
         private float maxHealth = 100;
         
         [SerializeField] private CharacterController charController;
-        [SerializeField] private Transform camera = null;
         
+        [Header("Camera")]
+        [SerializeField] private Transform vCamera = null;
+        [SerializeField] private Transform camRoot = null;
+        
+        [Header("Health Bar")]
         [SerializeField] private CanvasGroup healthGroup;
         [SerializeField] private Image healthImage;
         
+        [Header("Mouse Sensitivity")]
+        [SerializeField] private float mouseSensitivity = 40;
+
+        [Header("Gun")]
+        [SerializeField] private GunBase gunBase;
+
         private float speed = 3;
     
         private Vector3 inputVector = Vector3.zero;
@@ -33,11 +44,13 @@ namespace Runtime.Player
             if(!hasAuthority) { return; }
 
             Move(inputVector);
-            transform.Rotate(Vector3.up, Mouse.current.delta.x.ReadValue());
+        }
 
-            xRotation -= Mouse.current.delta.y.ReadValue();
-            xRotation = Mathf.Clamp(xRotation, -80f, 80f);
-            camera.localRotation = Quaternion.Euler(xRotation, 0, 0);
+        private void Update()
+        {
+            if(!hasAuthority) { return; }
+            
+            MouseRotate();
         }
 
         public override void OnStopAuthority()
@@ -54,7 +67,7 @@ namespace Runtime.Player
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
 
-            camera.gameObject.SetActive(true);
+            vCamera.gameObject.SetActive(true);
 
             controller ??= new Controller();
 
@@ -78,6 +91,15 @@ namespace Runtime.Player
             Vector3 move = transform.right * input.x + transform.forward * input.z;
 
             charController.Move((move * speed + Physics.gravity) * Time.fixedDeltaTime);
+        }
+
+        private void MouseRotate()
+        {
+            transform.Rotate(Vector3.up, Mouse.current.delta.x.ReadValue() * mouseSensitivity * Time.deltaTime);
+
+            xRotation -= Mouse.current.delta.y.ReadValue() * mouseSensitivity * Time.deltaTime;
+            xRotation = Mathf.Clamp(xRotation, -80f, 80f);
+            camRoot.localRotation = Quaternion.Euler(xRotation, 0, 0);
         }
 
         #endregion
@@ -125,14 +147,11 @@ namespace Runtime.Player
         {
             Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2));
             
-            Debug.Log("Fire");
-            
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
-                if (hit.collider.TryGetComponent<IAttackAble>(out IAttackAble attackAble))
-                {
+                IAttackAble attackAble = gunBase.FireRayBullet(hit.point);
+                if (attackAble != null)
                     CmdFire(attackAble);
-                }
             }
         }
 
