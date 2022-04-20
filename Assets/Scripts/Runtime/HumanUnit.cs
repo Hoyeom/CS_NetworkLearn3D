@@ -13,6 +13,13 @@ namespace Runtime
         
         [SerializeField] private CharacterController charController = null;
         [SerializeField] private Animator anim = null;
+        [SerializeField] private Transform eyePos;
+        [SerializeField] private Transform aimPosObj;
+
+        private void Update()
+        {
+            aimPosObj.position = mainCam.transform.position + mainCam.transform.forward * 3;
+        }
 
         public override void Move()
         {

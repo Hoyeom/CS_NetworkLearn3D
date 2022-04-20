@@ -19,9 +19,9 @@ namespace Runtime
 
         private Vector3 input = Vector3.zero;
         
-        private Camera mainCam = null;
+        protected Camera mainCam = null;
 
-        private void Awake() => mainCam = Camera.main;
+        public void Awake() => mainCam = Camera.main;
         
         public virtual void Move() { }
 
